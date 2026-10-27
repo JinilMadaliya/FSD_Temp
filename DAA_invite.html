@@ -1,0 +1,782 @@
+//bootstrap with local storage
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Library Management System</title>
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+          rel="stylesheet">
+</head>
+
+<body class="bg-light">
+
+<div class="container mt-5 mb-5">
+
+    <h1 class="text-center mb-4">Library Management System</h1>
+
+    <!-- Book Form -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">Book Details</h5>
+        </div>
+
+        <div class="card-body">
+            <form id="bookForm">
+                <div class="row g-3">
+
+                    <div class="col-md-6">
+                        <label for="id" class="form-label">Book ID</label>
+                        <input type="number" id="id" class="form-control"
+                               required>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label for="title" class="form-label">Book Title</label>
+                        <input type="text" id="title" class="form-control"
+                               required>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label for="author" class="form-label">Author</label>
+                        <input type="text" id="author" class="form-control"
+                               required>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label for="category" class="form-label">Category</label>
+                        <input type="text" id="category" class="form-control"
+                               required>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label for="isbn" class="form-label">ISBN</label>
+                        <input type="text" id="isbn" class="form-control"
+                               required>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label for="copies" class="form-label">Copies</label>
+                        <input type="number" id="copies" min="0"
+                               class="form-control" required>
+                    </div>
+
+                    <div class="col-12">
+                        <button type="submit" class="btn btn-success">
+                            Add Book
+                        </button>
+
+                        <button type="button" class="btn btn-warning"
+                                onclick="updateBook()">
+                            Update Book
+                        </button>
+
+                        <button type="button" class="btn btn-danger"
+                                onclick="deleteBook()">
+                            Delete Book
+                        </button>
+
+                        <button type="button" class="btn btn-secondary"
+                                onclick="clearForm()">
+                            Clear
+                        </button>
+                    </div>
+
+                </div>
+            </form>
+
+            <div id="message" class="mt-3"></div>
+        </div>
+    </div>
+
+    <!-- Book Table -->
+    <div class="card shadow-sm">
+        <div class="card-header bg-dark text-white">
+            <h5 class="mb-0">Book Records</h5>
+        </div>
+
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered table-striped table-hover">
+                    <thead class="table-primary">
+                        <tr>
+                            <th>ID</th>
+                            <th>Title</th>
+                            <th>Author</th>
+                            <th>Category</th>
+                            <th>ISBN</th>
+                            <th>Copies</th>
+                        </tr>
+                    </thead>
+
+                    <tbody id="bookTable"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    const form = document.getElementById("bookForm");
+    const table = document.getElementById("bookTable");
+    const message = document.getElementById("message");
+
+    // READ: Get books from localStorage
+    function getBooks() {
+        return JSON.parse(localStorage.getItem("books")) || [];
+    }
+
+    // Save books to localStorage
+    function saveBooks(books) {
+        localStorage.setItem("books", JSON.stringify(books));
+    }
+
+    // READ: Display all books
+    function displayBooks() {
+        const books = getBooks();
+        table.innerHTML = "";
+
+        books.forEach(book => {
+            const row = document.createElement("tr");
+
+            [
+                book.id, book.title, book.author,
+                book.category, book.isbn, book.copies
+            ].forEach(value => {
+                const cell = document.createElement("td");
+                cell.textContent = value;
+                row.appendChild(cell);
+            });
+
+            // Click a row to select a book
+            row.style.cursor = "pointer";
+
+            row.onclick = function() {
+                document.getElementById("id").value = book.id;
+                document.getElementById("title").value = book.title;
+                document.getElementById("author").value = book.author;
+                document.getElementById("category").value = book.category;
+                document.getElementById("isbn").value = book.isbn;
+                document.getElementById("copies").value = book.copies;
+            };
+
+            table.appendChild(row);
+        });
+    }
+
+    // Show success or error message
+    function showMessage(text, isError = false) {
+        message.textContent = text;
+        message.className = isError
+            ? "alert alert-danger mt-3"
+            : "alert alert-success mt-3";
+    }
+
+    // CREATE: Add a new book
+    form.addEventListener("submit", function(event) {
+        event.preventDefault();
+
+        const books = getBooks();
+        const id = Number(document.getElementById("id").value);
+
+        if (books.some(book => book.id === id)) {
+            showMessage("Book ID already exists!", true);
+            return;
+        }
+
+        const book = {
+            id: id,
+            title: document.getElementById("title").value.trim(),
+            author: document.getElementById("author").value.trim(),
+            category: document.getElementById("category").value.trim(),
+            isbn: document.getElementById("isbn").value.trim(),
+            copies: Number(document.getElementById("copies").value)
+        };
+
+        books.push(book);
+        saveBooks(books);
+        displayBooks();
+        clearForm();
+        showMessage("Book added successfully!");
+    });
+
+    // UPDATE: Update an existing book
+    function updateBook() {
+        if (!form.reportValidity()) return;
+
+        const books = getBooks();
+        const id = Number(document.getElementById("id").value);
+
+        const index = books.findIndex(book => book.id === id);
+
+        if (index === -1) {
+            showMessage("Book ID not found!", true);
+            return;
+        }
+
+        books[index] = {
+            id: id,
+            title: document.getElementById("title").value.trim(),
+            author: document.getElementById("author").value.trim(),
+            category: document.getElementById("category").value.trim(),
+            isbn: document.getElementById("isbn").value.trim(),
+            copies: Number(document.getElementById("copies").value)
+        };
+
+        saveBooks(books);
+        displayBooks();
+        clearForm();
+        showMessage("Book updated successfully!");
+    }
+
+    // DELETE: Delete a book
+    function deleteBook() {
+        const idInput = document.getElementById("id");
+
+        if (idInput.value === "") {
+            showMessage("Enter or select a Book ID first!", true);
+            return;
+        }
+
+        const id = Number(idInput.value);
+        const books = getBooks();
+
+        if (!books.some(book => book.id === id)) {
+            showMessage("Book ID not found!", true);
+            return;
+        }
+
+        if (!confirm("Are you sure you want to delete this book?")) {
+            return;
+        }
+
+        const updatedBooks = books.filter(book => book.id !== id);
+
+        saveBooks(updatedBooks);
+        displayBooks();
+        clearForm();
+        showMessage("Book deleted successfully!");
+    }
+
+    // Clear form
+    function clearForm() {
+        form.reset();
+    }
+
+    // Load records when the page opens
+    displayBooks();
+</script>
+
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+//This is for DB
+
+CREATE DATABASE IF NOT EXISTS library_db;
+
+USE library_db;
+
+CREATE TABLE IF NOT EXISTS books (
+    id INT PRIMARY KEY,
+    title VARCHAR(150) NOT NULL,
+    author VARCHAR(100) NOT NULL,
+    category VARCHAR(80) NOT NULL,
+    isbn VARCHAR(30) NOT NULL,
+    copies INT NOT NULL
+);
+
+
+//server.js
+
+const http = require("http");
+const fs = require("fs");
+const path = require("path");
+const mysql = require("mysql2");
+
+const PORT = 3000;
+
+// Connect to XAMPP MySQL
+const db = mysql.createConnection({
+    host: "localhost",
+    user: "root",
+    password: "",
+    database: "library_db"
+});
+
+db.connect(err => {
+    if (err) {
+        console.log("Database connection failed:", err.message);
+        return;
+    }
+    console.log("MySQL connected successfully!");
+});
+
+function sendJSON(res, status, data) {
+    res.writeHead(status, {
+        "Content-Type": "application/json"
+    });
+    res.end(JSON.stringify(data));
+}
+
+function readBody(req, callback) {
+    let body = "";
+
+    req.on("data", chunk => body += chunk);
+
+    req.on("end", () => {
+        try {
+            callback(null, JSON.parse(body || "{}"));
+        } catch {
+            callback(new Error("Invalid JSON"));
+        }
+    });
+}
+
+const server = http.createServer((req, res) => {
+    const url = new URL(req.url, "http://localhost");
+
+    // READ
+    if (req.method === "GET" && url.pathname === "/books") {
+        db.query("SELECT * FROM books", (err, rows) => {
+            if (err) return sendJSON(res, 500, { error: err.message });
+            sendJSON(res, 200, rows);
+        });
+    }
+
+    // CREATE
+    else if (req.method === "POST" && url.pathname === "/books") {
+        readBody(req, (err, book) => {
+            if (err) return sendJSON(res, 400, { error: err.message });
+
+            const sql = `INSERT INTO books
+                (id, title, author, category, isbn, copies)
+                VALUES (?, ?, ?, ?, ?, ?)`;
+
+            const values = [
+                book.id, book.title, book.author,
+                book.category, book.isbn, book.copies
+            ];
+
+            db.query(sql, values, err => {
+                if (err) return sendJSON(res, 500, { error: err.message });
+                sendJSON(res, 201, { message: "Book added successfully" });
+            });
+        });
+    }
+
+    // UPDATE
+    else if (req.method === "PUT" && url.pathname.startsWith("/books/")) {
+        const id = url.pathname.split("/")[2];
+
+        readBody(req, (err, book) => {
+            if (err) return sendJSON(res, 400, { error: err.message });
+
+            const sql = `UPDATE books SET
+                title = ?, author = ?, category = ?, isbn = ?, copies = ?
+                WHERE id = ?`;
+
+            const values = [
+                book.title, book.author, book.category,
+                book.isbn, book.copies, id
+            ];
+
+            db.query(sql, values, (err, result) => {
+                if (err) return sendJSON(res, 500, { error: err.message });
+
+                if (result.affectedRows === 0) {
+                    return sendJSON(res, 404, { message: "Book ID not found" });
+                }
+
+                sendJSON(res, 200, { message: "Book updated successfully" });
+            });
+        });
+    }
+
+    // DELETE
+    else if (req.method === "DELETE" && url.pathname.startsWith("/books/")) {
+        const id = url.pathname.split("/")[2];
+
+        db.query("DELETE FROM books WHERE id = ?", [id], (err, result) => {
+            if (err) return sendJSON(res, 500, { error: err.message });
+
+            if (result.affectedRows === 0) {
+                return sendJSON(res, 404, { message: "Book ID not found" });
+            }
+
+            sendJSON(res, 200, { message: "Book deleted successfully" });
+        });
+    }
+
+    // Serve Bootstrap frontend
+    else if (req.method === "GET" && url.pathname === "/") {
+        const file = path.join(__dirname, "public", "index.html");
+
+        fs.readFile(file, (err, content) => {
+            if (err) {
+                res.writeHead(500, { "Content-Type": "text/plain" });
+                return res.end("Cannot load index.html");
+            }
+
+            res.writeHead(200, { "Content-Type": "text/html" });
+            res.end(content);
+        });
+    }
+
+    else {
+        sendJSON(res, 404, { message: "Route not found" });
+    }
+});
+
+server.listen(PORT, () => {
+    console.log(`Server running at http://localhost:${PORT}`);
+});
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+//public/index.html
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Library Management</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+          rel="stylesheet">
+</head>
+
+<body class="bg-light">
+
+<div class="container mt-5 mb-5">
+    <h1 class="text-center mb-4">Library Management System</h1>
+
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            Book Details
+        </div>
+
+        <div class="card-body">
+            <form id="bookForm">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Book ID</label>
+                        <input type="number" id="id" class="form-control" required>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label">Title</label>
+                        <input type="text" id="title" class="form-control" required>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label">Author</label>
+                        <input type="text" id="author" class="form-control" required>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label">Category</label>
+                        <input type="text" id="category" class="form-control" required>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label">ISBN</label>
+                        <input type="text" id="isbn" class="form-control" required>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label">Copies</label>
+                        <input type="number" id="copies" min="0"
+                               class="form-control" required>
+                    </div>
+
+                    <div class="col-12">
+                        <button type="submit" class="btn btn-success">
+                            Add Book
+                        </button>
+
+                        <button type="button" onclick="updateBook()"
+                                class="btn btn-warning">
+                            Update
+                        </button>
+
+                        <button type="button" onclick="deleteBook()"
+                                class="btn btn-danger">
+                            Delete
+                        </button>
+
+                        <button type="button" onclick="clearForm()"
+                                class="btn btn-secondary">
+                            Clear
+                        </button>
+                    </div>
+                </div>
+            </form>
+
+            <p id="message" class="mt-3"></p>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header bg-dark text-white">
+            Book Records
+        </div>
+
+        <div class="card-body table-responsive">
+            <table class="table table-bordered table-striped table-hover">
+                <thead class="table-primary">
+                    <tr>
+                        <th>ID</th>
+                        <th>Title</th>
+                        <th>Author</th>
+                        <th>Category</th>
+                        <th>ISBN</th>
+                        <th>Copies</th>
+                    </tr>
+                </thead>
+                <tbody id="bookTable"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    const form = document.getElementById("bookForm");
+    const table = document.getElementById("bookTable");
+    const message = document.getElementById("message");
+
+    function showMessage(text, error = false) {
+        message.textContent = text;
+        message.className = error
+            ? "mt-3 text-danger"
+            : "mt-3 text-success";
+    }
+
+    function getFormData() {
+        return {
+            id: Number(document.getElementById("id").value),
+            title: document.getElementById("title").value.trim(),
+            author: document.getElementById("author").value.trim(),
+            category: document.getElementById("category").value.trim(),
+            isbn: document.getElementById("isbn").value.trim(),
+            copies: Number(document.getElementById("copies").value)
+        };
+    }
+
+    async function request(url, method, data) {
+        const options = { method };
+
+        if (data !== undefined) {
+            options.headers = { "Content-Type": "application/json" };
+            options.body = JSON.stringify(data);
+        }
+
+        const response = await fetch(url, options);
+        const result = await response.json();
+
+        if (!response.ok) {
+            throw new Error(result.error || result.message || "Request failed");
+        }
+
+        return result;
+    }
+
+    // READ
+    async function displayBooks() {
+        try {
+            const books = await request("/books", "GET");
+            table.innerHTML = "";
+
+            books.forEach(book => {
+                const row = document.createElement("tr");
+
+                [
+                    book.id, book.title, book.author,
+                    book.category, book.isbn, book.copies
+                ].forEach(value => {
+                    const cell = document.createElement("td");
+                    cell.textContent = value;
+                    row.appendChild(cell);
+                });
+
+                row.style.cursor = "pointer";
+
+                row.onclick = () => {
+                    document.getElementById("id").value = book.id;
+                    document.getElementById("title").value = book.title;
+                    document.getElementById("author").value = book.author;
+                    document.getElementById("category").value = book.category;
+                    document.getElementById("isbn").value = book.isbn;
+                    document.getElementById("copies").value = book.copies;
+                };
+
+                table.appendChild(row);
+            });
+        } catch (error) {
+            showMessage(error.message, true);
+        }
+    }
+
+    // CREATE
+    form.addEventListener("submit", async event => {
+        event.preventDefault();
+
+        try {
+            const result = await request("/books", "POST", getFormData());
+            showMessage(result.message);
+            clearForm();
+            displayBooks();
+        } catch (error) {
+            showMessage(error.message, true);
+        }
+    });
+
+    // UPDATE
+    async function updateBook() {
+        if (!form.reportValidity()) return;
+
+        const id = document.getElementById("id").value;
+
+        try {
+            const result = await request(
+                "/books/" + encodeURIComponent(id),
+                "PUT",
+                getFormData()
+            );
+
+            showMessage(result.message);
+            clearForm();
+            displayBooks();
+        } catch (error) {
+            showMessage(error.message, true);
+        }
+    }
+
+    // DELETE
+    async function deleteBook() {
+        const id = document.getElementById("id").value;
+
+        if (id === "") {
+            showMessage("Enter or select a Book ID first.", true);
+            return;
+        }
+
+        if (!confirm("Delete this book?")) return;
+
+        try {
+            const result = await request(
+                "/books/" + encodeURIComponent(id),
+                "DELETE"
+            );
+
+            showMessage(result.message);
+            clearForm();
+            displayBooks();
+        } catch (error) {
+            showMessage(error.message, true);
+        }
+    }
+
+    function clearForm() {
+        form.reset();
+    }
+
+    // Load records when the page opens
+    displayBooks();
+</script>
+
+</body>
+</html>
+
+
